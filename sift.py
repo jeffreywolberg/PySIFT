@@ -22,6 +22,9 @@ Idea; do all convolutoin in integers, and then when in software convert all ints
 
 Tested running convolution with image between [0,1] -> works.
 Tried running their convolution using an uint8 image and then converting the DoGs to [-1,1] -> does not work
+
+TODO: It seems the floating point convolution is what is making or breaking the SIFT accuracy. Investigate how floating convolution is so different from integer convolution
+and then converting back to floats. Is the lack of precision from integer convolution really so important here? Is there another issue after I convert to float that's causing the problem?
 '''
 
 class SIFT(object):
