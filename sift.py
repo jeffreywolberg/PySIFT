@@ -12,7 +12,7 @@ from orientation import assign_orientation
 from descriptors import get_local_descriptors
 
 from _SIFT import DoG_fixed_kernel_size
-from _SIFT_utils import display_DoG, reduce_img_size, get_sigma, get_ksize_from_sigma 
+from _SIFT_utils import display_DoG, reduce_img_size, get_sigma, get_ksize_from_sigma, manual_convolve, get_kernel
 
 '''
 4/24 notes: the algorithm works when the image is read in [0,1] range (float). No outlier points in the sky
@@ -27,8 +27,11 @@ TODO: It seems the floating point convolution is what is making or breaking the 
 and then converting back to floats. Is the lack of precision from integer convolution really so important here? Is there another issue after I convert to float that's causing the problem?
 
 
-4/25 Notes: Works when I do my cv2_conv in float64 and keep the original bounds that it gives me. First need to confirm if i can do manual convolution in floats and have it work, then need to confirm 
-if I can do manual convolution in ints, then scale them down to floats, and see if it works.
+4/25 Notes: Works when I do my cv2_conv in float64 and keep the original bounds that it gives me. Proved that it works by convolving with different kern sizes with different sigmas,
+as opposed to their approach of using same kernel but convolving on most recently convolved image. 
+Need to confirm if i can do manual convolution in floats and have it work, then need to confirm 
+if I can do manual convolution in ints, then scale them down to floats, and see if it works. Confirmed that there was no issue with my kernel computation.
+Confirmed that there is no issue with my function manual_convolve when doing ops with float64 images and kernels. Need to confirm that it translates properly to [0,255] images and int kernels
 '''
 
 class SIFT(object):
@@ -44,46 +47,74 @@ class SIFT(object):
         self.w = w
 
     def get_features(self):
-        # gaussian_pyr, ims = generate_gaussian_pyramid(self.im, self.num_octave, self.s, self.sigma)  # np.uint8 if done with uint8 image
-        
+        ###### WORKS, THEIR IMPLEMENTATION IN FLOAT64 START ######
+        gaussian_pyr, ims = generate_gaussian_pyramid(self.im, self.num_octave, self.s, self.sigma)  # np.uint8 if done with uint8 image
+        # DoG_pyr = generate_DoG_pyramid(gaussian_pyr) # range is [-1, 1], in theory
+        ###### WORKS, THEIR IMPLEMENTATION IN FLOAT64 END ######
+
+
+        ###### DOESN'T WORK, YOU DON'T WANT TO TOUCH THE RANGE/SCALING OF G_BLUR or DOG START ######
         # for i, g_octave in enumerate(gaussian_pyr):
         #     for j, g_blur in enumerate(g_octave):
         #         gaussian_pyr[i][j] = g_blur.astype(np.float64) / np.amax(g_blur)
         #         assert np.amax(gaussian_pyr[i][j]) <= 1
         #         assert np.amin(gaussian_pyr[i][j]) >= 0
         
-        # DoG_pyr = generate_DoG_pyramid(gaussian_pyr) # range is [-1, 1], in theory
         # for i, DoG in enumerate(DoG_pyr):
         #     DoG_pyr[i] = DoG.astype(np.float64) / max(np.amax(DoG), abs(np.amin(DoG)))
         #     assert np.amax(DoG_pyr[i]) <= 1
         #     assert np.amin(DoG_pyr[i]) >= -1
+        ###### DOESN'T WORK, YOU DON'T WANT TO TOUCH THE RANGE/SCALING OF G_BLUR or DOG END ######
+
 
         num_blurs = 5
-        sigmas = [get_sigma(i, root=2.5) for i in range(num_blurs)]
-        kernel_sizes = [get_ksize_from_sigma(sig) for sig in sigmas] 
 
-        blurred_images, diffs = DoG_fixed_kernel_size(self.im, num_blurs, kernel_sizes, sigmas)
         img_2 = reduce_img_size(self.im, select_every=2)
-        blurred_images_2, diffs_2 = DoG_fixed_kernel_size(img_2, num_blurs, kernel_sizes, sigmas)
         img_4 = reduce_img_size(img_2, select_every=2)
-        blurred_images_4, diffs_4 = DoG_fixed_kernel_size(img_4, num_blurs, kernel_sizes, sigmas)
         img_8 = reduce_img_size(img_4, select_every=2)
-        blurred_images_8, diffs_8 = DoG_fixed_kernel_size(img_8, num_blurs, kernel_sizes, sigmas)
+        
+        ###### WORKS, convolve with different kernel sizes and sigmas START ######
+        # sigmas = [get_sigma(i, root=2.5) for i in range(num_blurs)]
+        # kernel_sizes = [get_ksize_from_sigma(sig) for sig in sigmas] 
+        # blurred_images, diffs = DoG_fixed_kernel_size(self.im, num_blurs, kernel_sizes, sigmas)
+        # blurred_images_2, diffs_2 = DoG_fixed_kernel_size(img_2, num_blurs, kernel_sizes, sigmas)
+        # blurred_images_4, diffs_4 = DoG_fixed_kernel_size(img_4, num_blurs, kernel_sizes, sigmas)
+        # blurred_images_8, diffs_8 = DoG_fixed_kernel_size(img_8, num_blurs, kernel_sizes, sigmas)
 
+        # gaussian_pyr = [np.zeros((int(self.s+3), int(self.im.shape[0] / scale), int(self.im.shape[1] // scale))) for scale in [1,2,4,8]]
+        # DoG_pyr = [np.zeros((int(self.s+2), int(self.im.shape[0] / scale), int(self.im.shape[1] // scale))) for scale in [1,2,4,8]]
+        # for i, (blur_ims, diffs) in enumerate(zip([blurred_images, blurred_images_2, blurred_images_4, blurred_images_8], [diffs, diffs_2, diffs_4, diffs_8])):
+        #     gaussian_pyr[i] = np.array(blur_ims).reshape(len(blur_ims), *blur_ims[0].shape)
+        #     DoG_pyr[i] = np.array(diffs).transpose(1,2,0)
+        ###### WORKS, convolve with different kernel sizes and sigmas END ######
+
+        
+        ###### WORKS, confirmed that manual_conolve gets desired result with float img and float kernel START ######
+        k = 2**(1/self.s)
+        kernel = gaussian_filter(k * self.sigma)
+
+        # gaussian_pyr dims: [num_octaves, num_blurs, num_rows, num_cols]
         gaussian_pyr = [np.zeros((int(self.s+3), int(self.im.shape[0] / scale), int(self.im.shape[1] // scale))) for scale in [1,2,4,8]]
+        # DoG_pyr expected dims: [num_octaves, num_rows, num_cols, num_blurs-1]. In initialization below I don't give it proper shape, I use .transpose later
         DoG_pyr = [np.zeros((int(self.s+2), int(self.im.shape[0] / scale), int(self.im.shape[1] // scale))) for scale in [1,2,4,8]]
-        for i, (blur_ims, diffs) in enumerate(zip([blurred_images, blurred_images_2, blurred_images_4, blurred_images_8], [diffs, diffs_2, diffs_4, diffs_8])):
-            gaussian_pyr[i] = np.array(blur_ims).reshape(len(blur_ims), *blur_ims[0].shape)
-            DoG_pyr[i] = np.array(diffs).transpose(1,2,0)
-
-        ims = [self.im, img_2, img_4, img_8]
+        for i, img in enumerate([self.im, img_2, img_4, img_8]):
+            for j in range(num_blurs):
+                gaussian_pyr[i][j, :, :] = manual_convolve(gaussian_pyr[i][j-1, :, :] if j > 0 else img, kernel)
+                if j > 0:
+                    DoG_pyr[i][j-1, :, :] = gaussian_pyr[i][j, :, :] - gaussian_pyr[i][j-1, :, :]
+            DoG_pyr[i] = DoG_pyr[i].transpose(1,2,0)   
+        ###### WORKS, confirmed that manual_conolve gets desired result with float img and float kernel END ######
+        
+        x = 0
         for i in range(len(gaussian_pyr)):
             gaussian_octave = gaussian_pyr[i]
+            ###### DOESN'T WORK, DON'T TOUCH SCALING/RANGE START ######
             # DoG_pyr[i] = (DoG_pyr[i].astype(np.float64) * 255.0/np.amax(DoG_pyr[i])).astype(np.uint8)
             # DoG_octave = (DoG_pyr[i].astype(np.float64) * 255.0/np.amax(DoG_pyr[i])).astype(np.uint8) # uint16, [0,45 around]
+            ###### DOESN'T WORK, DON'T TOUCH SCALING/RANGE END ######
             DoG_octave = DoG_pyr[i]
             im = ims[i]
-            display_DoG(gaussian_octave, [DoG_octave[:,:,i].reshape(1, *DoG_octave.shape[:2]).squeeze() for i in range(DoG_octave.shape[2])], f"DoG skimage {im.shape}")
+            # display_DoG(gaussian_octave, [DoG_octave[:,:,i].reshape(1, *DoG_octave.shape[:2]).squeeze() for i in range(DoG_octave.shape[2])], f"DoG skimage {im.shape}")
 
         kp_pyr = get_keypoints(DoG_pyr, self.R_th, self.t_c, self.w)
         feats = []

@@ -51,7 +51,8 @@ def get_kernel(size, sigma):
     x, y = np.mgrid[-size//2 + 1:size//2 + 1, -size//2 + 1:size//2 + 1]
     g = np.exp(-((x**2 + y**2)/(2.0*sigma**2))) / (2*np.pi*sigma**2)
     return g/g.sum()
-
+    
+    # size = int(size)
     # assert size % 2 == 1
     # kernel = np.zeros((size, size))
     # min_idx = -int(size / 2) # min idx when center is (0, 0)  (e.g. -5 for size 11)
