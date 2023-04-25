@@ -15,7 +15,7 @@ def get_grad(L, x, y):
 
 def quantize_orientation(theta, num_bins):
     bin_width = 360//num_bins
-    return int(np.floor(theta)//bin_width)
+    return int(np.floor(theta)//bin_width) % num_bins
 
 def fit_parabola(hist, binno, bin_width):
     centerval = binno*bin_width + bin_width/2.
@@ -48,14 +48,18 @@ def assign_orientation(kps, octave, num_bins=36):
         s = np.clip(s, 0, octave.shape[2]-1)
 
         sigma = kp[2]*1.5
-        w = int(2*np.ceil(sigma)+1)
+        # w = int(2*np.ceil(sigma)) | 1
         kernel = gaussian_filter(sigma)
+        w = kernel.shape[0] // 2
 
         L = octave[...,s]
         hist = np.zeros(num_bins, dtype=np.float32)
 
+        # for oy in range(-w, w):
         for oy in range(-w, w+1):
+            # for ox in range(-w, w):
             for ox in range(-w, w+1):
+
                 x, y = cx+ox, cy+oy
                 
                 if x < 0 or x > octave.shape[1]-1: continue
@@ -64,7 +68,7 @@ def assign_orientation(kps, octave, num_bins=36):
                 m, theta = get_grad(L, x, y)
                 weight = kernel[oy+w, ox+w] * m
 
-                bin = quantize_orientation(theta, num_bins)
+                bin = quantize_orientation(int(theta), num_bins)
                 hist[bin] += weight
 
         max_bin = np.argmax(hist)

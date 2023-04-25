@@ -30,7 +30,7 @@ def get_histogram_for_subregion(m, theta, num_bin, reference_angle, bin_width, s
     c = subregion_w/2 - .5
 
     for i, (mag, angle) in enumerate(zip(m, theta)):
-        angle = (angle-reference_angle) % 360
+        angle = int(angle-reference_angle) % 360
         binno = quantize_orientation(angle, num_bin)
         vote = mag
 

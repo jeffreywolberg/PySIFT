@@ -14,9 +14,9 @@ if __name__ == '__main__':
 	parser.add_argument('--output', type=str, dest='output_prefix', help='The prefix for the kp_pyr and feat_pyr files generated')
 	args = parser.parse_args()
 
-	im = imread(args.input_fname)
+	im = imread(args.input_fname)[:,:,:3]
 
-	sift_detector = SIFT(im)
+	sift_detector = SIFT(im, s=3)
 	_ = sift_detector.get_features()
 	kp_pyr = sift_detector.kp_pyr
 

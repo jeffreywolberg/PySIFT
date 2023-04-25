@@ -17,10 +17,12 @@ def generate_octave(init_level, s, sigma):
 
 def generate_gaussian_pyramid(im, num_octave, s, sigma):
     pyr = []
+    ims = []
 
     for _ in range(num_octave):
         octave = generate_octave(im, s, sigma)
         pyr.append(octave)
+        ims.append(im)
         im = octave[-3][::2, ::2]
 
-    return pyr
+    return pyr, ims
