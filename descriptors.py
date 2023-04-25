@@ -61,6 +61,9 @@ def get_local_descriptors(kps, octave, w=16, num_subregion=4, num_bin=8):
 
         t, l = max(0, cy-w//2), max(0, cx-w//2)
         b, r = min(L.shape[0], cy+w//2+1), min(L.shape[1], cx+w//2+1)
+        if min([t,l,b,r]) < 0:
+            print("Discarding kp!")
+            continue
         patch = L[t:b, l:r]
 
         dx, dy = get_patch_grads(patch)

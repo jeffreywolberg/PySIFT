@@ -22,7 +22,7 @@ def show_key_pts(img, key_pts, title="Img"):
 def get_gaussian_coefficient(x, y, sigma):
     return (1 / (2*math.pi * sigma ** 2)) * math.e ** ( -(x**2 + y**2) / (2 * sigma ** 2))  # lambda (the 2 coefficient in the denominator of the exponent) significantly affects the blurring and brightness)
 
-def display_DoG(blurred_images, diffs, title="DoG", zero_to_one=False):
+def display_DoG(blurred_images, diffs, title="DoG"):
 
     n_blur = len(blurred_images)
     n_diffs = n_blur - 1
@@ -31,18 +31,18 @@ def display_DoG(blurred_images, diffs, title="DoG", zero_to_one=False):
     fig, axes = plt.subplots(nrows=2, ncols=n_blur, figsize=(4*n_blur, 4))
     fig.suptitle(title)
     for i in range(n_blur):
-        axes[0, i].imshow(blurred_images[i], cmap='gray', vmin=0, vmax= 1 if zero_to_one else 255)
+        axes[0, i].imshow(blurred_images[i], cmap='gray', vmin=-1 if np.amin(blurred_images[i]) < 0 else 0, vmax= 1 if np.amax(blurred_images[i]) <= 1 else 255)
         axes[0, i].set_axis_off()
     for i in range(n_diffs):
         diff = diffs[i]
-        if np.amin(diffs[i]) < 0:
+        if np.amin(diffs[i]) < 0 and np.amax(diffs[i] > 1): # an integer image
             diff = diff.copy() # don't tamper with original DoG
             diff += abs(np.amin(diff)) # add shift so that pixel range is [0, 255]
             if np.amax(diff) > 255:
                 diff = (diff.astype(np.float64) * 255 / np.amax(diff)).astype(np.uint8)
-        if not zero_to_one:
+        if np.amax(diff) > 1:
             diff = diff.astype(np.uint8)
-        axes[1, i].imshow(diff, cmap='gray', vmin=0, vmax= 1 if zero_to_one else 255)
+        axes[1, i].imshow(diff, cmap='gray', vmin= -1 if np.amin(diff[i]) < 0 else 0, vmax= 1 if np.amax(diff[i]) <= 1 else 255)
         axes[1, i].set_axis_off()
     plt.show()
 

@@ -26,10 +26,18 @@ def DoG_fixed_kernel_size(image, num_blurs=5, kernel_sizes=[], sigmas=[]):
     
     diffs = []
     for i in range(len(out_images)-1):
-        diff = out_images[i+1].astype(np.int16) - out_images[i].astype(np.int16) # DoG is done here
-        # diff = diff.astype(np.float64) * 255 / np.amax(diff)
-        diff = diff + abs(np.amin(diff))
-        assert np.amax(diff) <= 255
+        if np.amax(out_images[i]) <= 1:
+            diff = out_images[i+1] - out_images[i] # DoG is done here
+            # diff /= max(abs(np.amin(diff)), np.amax(diff)) # img is at most [-1, 1]
+            # diff = diff / 2 + (1/2)
+            # diff /= np.amax(diff)
+            assert np.amin(diff) >= -1
+            assert np.amax(diff) <= 1
+            # assert np.amin(diff) >= 0
+        else:
+            diff = out_images[i+1].astype(np.int16) - out_images[i].astype(np.int16) # DoG is done here
+            diff = diff + abs(np.amin(diff))
+            assert np.amax(diff) <= 255
         diffs.append(diff)
 
     return out_images, diffs
