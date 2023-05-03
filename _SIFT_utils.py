@@ -72,7 +72,7 @@ def get_ksize_from_sigma(sigma):
     return int(6 * sigma + 1) | 1
 
 def reduce_img_size(img:np.ndarray, select_every=2):
-    return img[::select_every, ::select_every]
+    return img[1::select_every, 1::select_every]
 
 def get_integer_array_from_floats(kernel):
     scaling_factor = 1 / np.amin(kernel)
