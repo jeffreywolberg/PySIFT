@@ -74,5 +74,5 @@ def get_keypoints(DoG_pyr, R_th, t_c, w):
 
     for D in DoG_pyr:
         kps.append(find_keypoints_for_DoG_octave(D, R_th, t_c, w))
-
+	
     return kps

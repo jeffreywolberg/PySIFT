@@ -46,8 +46,9 @@ def display_DoG(blurred_images, diffs, title="DoG"):
         axes[1, i].set_axis_off()
     plt.show()
 
-def get_kernel(size, sigma):
-    size = 2*np.ceil(3*sigma)+1
+def get_kernel(k_size, sigma):
+    size = get_ksize_from_sigma(sigma)
+    assert k_size == size, "The size inputted into get_kernel does not match up with the kernel size calculated from sigma"
     x, y = np.mgrid[-size//2 + 1:size//2 + 1, -size//2 + 1:size//2 + 1]
     g = np.exp(-((x**2 + y**2)/(2.0*sigma**2))) / (2*np.pi*sigma**2)
     return g/g.sum()
@@ -129,3 +130,9 @@ def clamp(x, l, h):
     elif x > h:
         return h
     return x
+
+
+    
+
+
+

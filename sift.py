@@ -13,6 +13,7 @@ from descriptors import get_local_descriptors
 
 from _SIFT import DoG_fixed_kernel_size
 from _SIFT_utils import display_DoG, reduce_img_size, get_sigma, get_ksize_from_sigma, manual_convolve, get_kernel
+from verilog_utils import write_verilog_output
 
 '''
 4/24 notes: the algorithm works when the image is read in [0,1] range (float). No outlier points in the sky
@@ -110,9 +111,11 @@ class SIFT(object):
 
         sigmas = [get_sigma(i, root=2.5) for i in range(num_blurs)]
         kernel_sizes = [get_ksize_from_sigma(sig) for sig in sigmas] 
+        
         kernels = [get_kernel(size, sig) for size, sig in zip(kernel_sizes, sigmas)]
         scaling_factors = [1 / np.amin(k) for k in kernels]
         kernels = [(k * scale).astype(np.uint32) for k, scale in zip(kernels, scaling_factors)]
+        # print(kernels)
         k_over_16_bit = [np.any(k > 2**16-1) for k in kernels] ## kernel is over 16 bit, nee 32 bit representation with sigma root = 2.5
         print(k_over_16_bit)
 
